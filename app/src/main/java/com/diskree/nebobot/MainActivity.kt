@@ -56,21 +56,30 @@ class MainActivity : AppCompatActivity() {
         fun showHTML(html: String?) {
             val document = Jsoup.parse(html ?: return)
             if (currentActiveBot == Bot.AUTO_LABYRINTH) {
+                val confirmLink = document.selectFirst("a[href*=confirmLink]")
+                if (confirmLink != null) {
+                    loadGameUrl(confirmLink.attr("href"))
+                    return
+                }
                 val header = document.selectFirst("div.hdr>div>span>b")?.text()
                 if (header != "Лабиринт") {
                     loadGameUrl("doors")
                     return
                 }
-                val failMessage = document.selectFirst("span.notify")
-                if (failMessage != null) {
-                    vibrate(100)
-                    loadGameUrl("doors")
+                val victoryDoor = document.selectFirst("img.doorSel[src$=door_iron_big.png]")
+                if (victoryDoor != null) {
+                    vibrate(1000)
+                    binding.webViewLock.isVisible = false
                     return
                 }
-                val roomNumber = document.selectFirst("div.m5>b.amount")
-                if (roomNumber != null && roomNumber.text() == "10") {
-                    vibrate(500)
-                    binding.webViewLock.isVisible = false
+                val buyKeyLink = document.selectFirst("a.tdu[href*=buyKeyLink]")
+                if (buyKeyLink != null) {
+                    loadGameUrl("doors/" + buyKeyLink.attr("href"))
+                    return
+                }
+                val lossDoor = document.selectFirst("img.doorSel[src$=door_wall.png]")
+                if (lossDoor != null) {
+                    loadGameUrl("doors")
                     return
                 }
                 val doorNumber = (1..3).random()
@@ -119,7 +128,9 @@ class MainActivity : AppCompatActivity() {
 
     private fun loadGameUrl(path: String) {
         handler.postDelayed({
-            binding.webViewLock.isVisible = true
+            if (currentActiveBot != null) {
+                binding.webViewLock.isVisible = true
+            }
             binding.webView.loadUrl(GAME_URL_PREFIX + path)
         }, (300..500).random().toLong())
     }
